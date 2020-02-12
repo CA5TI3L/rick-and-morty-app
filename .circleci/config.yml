@@ -1,5 +1,9 @@
 version: 2
 
+
+orbs:
+  heroku: circleci/heroku@0.0.10.
+
 jobs:
         # The test job
     test:
@@ -41,3 +45,9 @@ workflows:
   test:
     jobs:
       - test
+      - heroku/deploy-via-git: # Use the pre-configured job, deploy-via-git
+          requires:
+            - build
+          filters:
+            branches:
+              only:  enhancement/ci-cd-integration
