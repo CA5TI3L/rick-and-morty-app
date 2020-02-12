@@ -1,53 +1,39 @@
 version: 2
 
 
-orbs:
-  heroku: circleci/heroku@0.0.10.
-
 jobs:
-        # The test job
-    test:
-        working_directory: ~/project-name
-        docker:
-            - image: circleci/node:10-browsers
-        steps:
-            # Checkout the code from the branch into the working_directory
-            - checkout
-            # Log the current branch
-            - run:
-                name: Show current branch
-                command: echo ${CIRCLE_BRANCH}
-            # Restore local dependencies from cache
-            - restore_cache:
-                keys:
-                - v1-dependencies-{{ checksum "package-lock.json" }}
-                - v1-dependencies-
-            # Install project dependencies
-            - run:
-                name: Install local dependencies
-                command: npm install
-            # Cache local dependencies if they don't exist
-            - save_cache:
-                key: v1-dependencies-{{ checksum "package-lock.json" }}
-                paths:
-                    - node_modules
-            # Lint the source code
-            - run:
-                name: Linting
-                command: npm run lint
-            # Test the source code
-            - run:
-                name: Testing
-                command: npm run test -- --no-watch --no-progress --browsers=ChromeHeadlessCI
+  build_test_deploy:
+    working_directory: ~/rick-and-morty-app
+    docker:
+      - image: circleci/node:12.9.1-browsers
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "package-lock.json" }}
+            - v1-dependencies-
+      - run:
+          name: Install dependencies
+          command: npm install
+      - save_cache:
+          key: v1-dependencies-{{ checksum "package-lock.json" }}
+          paths:
+            - node_modules
+      - run:
+          name: Linting
+          command: npm run lint
+      - run:
+          name: Testing
+          command: npm run test -- --no-watch --no-progress --browsers=ChromeHeadlessCI
+      - run:
+          name: Build
+          command: ./node_modules/@angular/cli/bin/ng build --prod
+      - run:
+          name: Firebase Deploy
+          command: ./node_modules/.bin/firebase deploy --token "$FIREBASE_TOKEN"
 
 workflows:
   version: 2
-  test:
+  build_test_deploy:
     jobs:
-      - test
-      - heroku/deploy-via-git: # Use the pre-configured job, deploy-via-git
-          requires:
-            - test
-          filters:
-            branches:
-              only:  enhancement/ci-cd-integration
+      - build_test_deploy
